@@ -1,2 +1,2 @@
-bundle-and-tychjo
+bundle-and-tycho
 =================
