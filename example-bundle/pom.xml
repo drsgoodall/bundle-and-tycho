@@ -1,0 +1,166 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>example-bundle</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<packaging>bundle</packaging>
+
+	<parent>
+		<groupId>com.example.bundle-and-tycho</groupId>
+		<artifactId>com.example.bundle-and-tycho.parent</artifactId>
+		<version>1-SNAPSHOT</version>
+	</parent>
+
+	<build>
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven.compiler.plugin.version}</version>
+				<!-- Build code for java 1.6 -->
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+				</configuration>
+			</plugin>
+
+			<!-- Use the build helper to grab the major.minor.increment version components -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>${build.helper.maven.plugin.version}</version>
+				
+				<executions>
+
+					<execution>
+						<id>parse-version</id>
+						<goals>
+							<goal>parse-version</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+					<version>${maven.bundle.plugin.version}</version>
+					<!-- Enable extensions, such as the bundle packaging type -->
+					<extensions>true</extensions>
+
+					<configuration>
+						<!-- Generate manifest in top level so Eclipse/PDE can pick it up in 
+							source tree -->
+						<manifestLocation>META-INF</manifestLocation>
+						<instructions>
+							<Bundle-RequiredExecutionEnvironment>JavaSE-1.6</Bundle-RequiredExecutionEnvironment>
+							<!-- Implementing poms need to have a line of the following style -->
+							<Export-Package>com.example.*;version="${unqualifiedVersion}-${buildQualifier}"</Export-Package>
+							<Bundle-Version>${_Bundle-QualifiedVersion}</Bundle-Version>
+						</instructions>
+					</configuration>
+
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${maven.source.plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<phase>package</phase>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+
+				<configuration>
+					<archive>
+						<!-- Generate required manifest headers to create a consumable source 
+							bundle in eclipse -->
+						<manifestEntries>
+							<Bundle-SymbolicName>${Bundle-SymbolicName}.source</Bundle-SymbolicName>
+							<Bundle-Version>${_Bundle-QualifiedVersion}</Bundle-Version>
+							<Eclipse-SourceBundle>${Bundle-SymbolicName};version="${_Bundle-QualifiedVersion}";roots:="."</Eclipse-SourceBundle>
+							<Bundle-ManifestVersion>2</Bundle-ManifestVersion>
+						</manifestEntries>
+					</archive>
+
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<configuration>
+					<filesets>
+						<fileset>
+							<directory>META-INF</directory>
+						</fileset>
+					</filesets>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+	<profiles>
+		<!-- Build profile for use in m2e - tycho packaging goal is not executed, 
+			but we also just want .qualifier in eclipse. -->
+		<profile>
+			<id>m2e</id>
+			<activation>
+				<property>
+					<name>m2e.version</name>
+				</property>
+			</activation>
+
+			<properties>
+				<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+				<_Bundle-QualifiedVersion>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}.qualifier</_Bundle-QualifiedVersion>
+				<_Bundle-UnqualifiedVersion>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</_Bundle-UnqualifiedVersion>
+			</properties>
+		</profile>
+		<!-- None m2e build - lets expect its a normal external build, so execute 
+			the build-qualifier goal to resolve .qualifier -->
+		<profile>
+			<id>normal</id>
+			<activation>
+				<property>
+					<name>!m2e.version</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<!-- Use the tycho packaging plugin to set an appropriate qualifier -->
+					<!-- Note release versions should (probably...) use ${pom.version} instead 
+						of ${unqualifiedVersion}-${buildQualifier} -->
+					<plugin>
+						<groupId>org.eclipse.tycho</groupId>
+						<artifactId>tycho-packaging-plugin</artifactId>
+						<version>${tycho.version}</version>
+						<inherited>true</inherited>
+						<executions>
+							<execution>
+								<id>build-qualifier</id>
+								<phase>validate</phase>
+								<goals>
+									<goal>build-qualifier</goal>
+								</goals>
+							</execution>
+						</executions>
+
+					</plugin>
+				</plugins>
+			</build>
+			<properties>
+				<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+				<_Bundle-QualifiedVersion>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}.${buildQualifier}</_Bundle-QualifiedVersion>
+				<_Bundle-UnqualifiedVersion>${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}</_Bundle-UnqualifiedVersion>
+			</properties>
+		</profile>
+	</profiles>
+
+</project>
